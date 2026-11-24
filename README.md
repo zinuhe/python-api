@@ -15,6 +15,8 @@ Desde la raíz del proyecto:
 
 ```
 uvicorn app.main:app --reload
+// or
+python -m app.main
 ```
 
 Luego prueba en el navegador:
