@@ -28,10 +28,10 @@ Es la opción clásica para producción en servidores propios. Gunicorn se encar
 gunicorn app.main:app -k uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000
 
 # Docker
-# docker build crea la imagen siguiendo el Dockerfile, y docker run arranca un contenedor a partir de ella. El -p 8000:8000 conecta el puerto 8000 de tu máquina con el del contenedor, así que sigues abriendo http://127.0.0.1:8000/ igual que antes.
+# docker build crea la imagen siguiendo el Dockerfile, y docker run arranca un contenedor a partir de ella.
+# El -p 8000:8000 conecta el puerto 8000 de tu máquina con el del contenedor, se sigue abriendo en http://127.0.0.1:8000/
 docker build -t mi-proyecto .
 docker run -p 8000:8000 mi-proyecto
-
 ```
 
 Luego prueba en el navegador:
