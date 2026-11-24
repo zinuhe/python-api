@@ -26,6 +26,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 # Gunicorn como gestor de procesos, con workers de Uvicorn
 Es la opción clásica para producción en servidores propios. Gunicorn se encarga de gestionar los procesos (reinicia los que fallan, reparte carga) y Uvicorn atiende las peticiones async.
 gunicorn app.main:app -k uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000
+
+# Docker
+# docker build crea la imagen siguiendo el Dockerfile, y docker run arranca un contenedor a partir de ella. El -p 8000:8000 conecta el puerto 8000 de tu máquina con el del contenedor, así que sigues abriendo http://127.0.0.1:8000/ igual que antes.
+docker build -t mi-proyecto .
+docker run -p 8000:8000 mi-proyecto
+
 ```
 
 Luego prueba en el navegador:
