@@ -14,9 +14,18 @@ pip install -r requirements.txt
 Desde la raíz del proyecto:
 
 ```
+# Development with reload
 uvicorn app.main:app --reload
-// or
+
+# Development
 python -m app.main
+
+# Production
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+
+# Gunicorn como gestor de procesos, con workers de Uvicorn
+Es la opción clásica para producción en servidores propios. Gunicorn se encarga de gestionar los procesos (reinicia los que fallan, reparte carga) y Uvicorn atiende las peticiones async.
+gunicorn app.main:app -k uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000
 ```
 
 Luego prueba en el navegador:
