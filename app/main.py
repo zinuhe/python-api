@@ -16,21 +16,21 @@ calculator = Calculator()
 # Cuando alguien visita esa dirección, FastAPI ejecuta la función y devuelve su resultado como JSON.
 @app.get("/")
 async def inicio():
-    return {"mensaje": "¡Hola desde FastAPI!"}
+    return {"message": "Hello from FastAPI!"}
 
 # Ruta de health check: sirve para comprobar que la API está viva y respondiendo.
 # Herramientas como Docker, Kubernetes o balanceadores de carga suelen consultarla periódicamente.
 @app.get("/health")
 async def health():
-    return {"estado": "ok"}
+    return {"status": "ok"}
 
 # Handler que llama al método sum() de la clase Calculator.
 # Los parámetros x e y se reciben como query params, por ejemplo: /sum?x=2&y=3
 # FastAPI convierte automáticamente los valores a int y valida que sean números.
 @app.get("/sum")
 async def suma(x: int, y: int):
-    resultado = calculator.sum(x, y)
-    return {"x": x, "y": y, "resultado": resultado}
+    result = calculator.sum(x, y)
+    return {"x": x, "y": y, "result": result}
 
 # El bloque if __name__ == "__main__" solo se ejecuta cuando lanzas este archivo
 # directamente (python -m app.main), no cuando otro módulo lo importa.
