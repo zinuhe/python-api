@@ -19,7 +19,7 @@ Desde la raíz del proyecto:
 # Development with reload
 uvicorn app.main:app --reload
 
-# Development with reload, sin activar el venv
+# Development with reload (usando el uvicorn del venv directamente, sin activarlo)
 .venv/bin/uvicorn app.main:app --reload
 
 # Development
