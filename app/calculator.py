@@ -5,3 +5,7 @@ class Calculator:
     # "self" es la referencia al objeto Calculator actual (obligatorio en métodos de instancia).
     def sum(self, x: int, y: int) -> int:
         return x + y
+
+    # Igual que sum(), pero multiplica. Se usa en el endpoint /multiply, que recibe la calculadora por DI.
+    def multiply(self, x: int, y: int) -> int:
+        return x * y

@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 import uvicorn
 
 # Importamos la clase Calculator desde app/calculator.py.
@@ -30,6 +30,22 @@ async def health():
 @app.get("/sum")
 async def suma(x: int, y: int):
     result = calculator.sum(x, y)
+    return {"x": x, "y": y, "result": result}
+
+# --- Inyección de dependencias (DI) ---
+# Función "proveedora": le dice a FastAPI cómo crear la dependencia.
+# Si mañana la calculadora necesita configuración, solo se cambia aquí.
+def get_calculator() -> Calculator:
+    return Calculator()
+
+# Compara con /sum: allí el handler usa la variable global "calculator" (la crea main.py).
+# Aquí el handler recibe la calculadora por parámetro: Depends(get_calculator) hace que
+# FastAPI llame a get_calculator() en cada petición y pase el resultado como "calc".
+# El handler no sabe cómo se crea la calculadora, y en tests se puede reemplazar
+# con app.dependency_overrides[get_calculator].
+@app.get("/multiply")
+async def multiplicacion(x: int, y: int, calc: Calculator = Depends(get_calculator)):
+    result = calc.multiply(x, y)
     return {"x": x, "y": y, "result": result}
 
 # El bloque if __name__ == "__main__" solo se ejecuta cuando lanzas este archivo
