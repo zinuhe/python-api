@@ -6,6 +6,8 @@ API sencilla con FastAPI que expone una operación de suma.
 ## Instalación
 
 ```
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -16,6 +18,9 @@ Desde la raíz del proyecto:
 ```
 # Development with reload
 uvicorn app.main:app --reload
+
+# Development with reload, sin activar el venv
+.venv/bin/uvicorn app.main:app --reload
 
 # Development
 python -m app.main
