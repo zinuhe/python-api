@@ -46,6 +46,40 @@ Luego prueba en el navegador:
 - http://127.0.0.1:8000/sum?x=2&y=3 (devuelve 5)
 - http://127.0.0.1:8000/docs (documentación interactiva)
 
+## Probar los endpoints desde la terminal
+
+Con la API corriendo en `127.0.0.1:8000`. Las comillas en las URLs con `&` son necesarias, porque si no zsh interpreta el `&` como "ejecutar en segundo plano".
+
+### curl + jq
+
+`curl` viene instalado en macOS. `jq` da formato (indentación y colores) al JSON.
+
+```
+# Instalar jq
+brew install jq
+
+# Probar (-s quita la barra de progreso de curl)
+curl -s http://127.0.0.1:8000/ | jq
+curl -s http://127.0.0.1:8000/health | jq
+curl -s "http://127.0.0.1:8000/sum?x=2&y=3" | jq
+```
+
+### curl + python -m json.tool
+
+No necesita instalar nada, solo Python. El formato es el mismo, pero sin colores.
+
+```
+curl -s http://127.0.0.1:8000/ | python3 -m json.tool
+curl -s http://127.0.0.1:8000/health | python3 -m json.tool
+curl -s "http://127.0.0.1:8000/sum?x=2&y=3" | python3 -m json.tool
+```
+
+Para ver el código de estado y las cabeceras (por ejemplo, el 422 cuando x no es un número), usa `curl -i` sin el pipe:
+
+```
+curl -i "http://127.0.0.1:8000/sum?x=abc&y=3"
+```
+
 ---
 ## Workers en Uvicorn
 
