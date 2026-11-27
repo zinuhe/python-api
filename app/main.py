@@ -80,9 +80,11 @@ async def ask(question: str) -> MathAnswer:
         raise HTTPException(status_code=502, detail="The AI model failed or is unavailable.")
 
     if isinstance(result.output, UnsupportedOperation):
+        # La razón del modelo puede venir en cualquier idioma, así que solo se registra en el log.
+        logger.info("Unsupported operation for %r: %s", question, result.output.reason)
         raise HTTPException(
             status_code=422,
-            detail=f"Operation not supported. Available operations: sum, multiply. ({result.output.reason})",
+            detail="Operation not supported. Available operations: sum, multiply.",
         )
     return result.output
 

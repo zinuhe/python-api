@@ -109,7 +109,10 @@ def test_ask_unsupported_operation_returns_422():
         response = client.get("/ask", params={"question": "cuanto es 10 dividido entre 5"})
 
     assert response.status_code == 422
-    assert "Operation not supported" in response.json()["detail"]
+    # El mensaje es fijo y en inglés: la razón del modelo ("division is not available") no se expone.
+    assert response.json() == {
+        "detail": "Operation not supported. Available operations: sum, multiply."
+    }
 
 
 # Si el modelo falla (Ollama apagado, sin key, salida inválida...), es un error del servidor:
