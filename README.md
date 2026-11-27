@@ -76,6 +76,7 @@ El código está en `app/agent.py`. Un agente recibe una pregunta en lenguaje na
 
   Probados con `/ask`: `qwen2.5:7b` (recomendado, ~2-5 s por pregunta) y `qwen3:8b` (también acierta, pero es mucho más lento porque "piensa" antes de responder). Los modelos de `llama` (`llama3.2:1b`, `llama3.1:8b`) fallaron: no devuelven el formato de `MathAnswer` de forma fiable.
 - **Sin Ollama corriendo (o sin key si usas Anthropic):** la app arranca normal y el resto de endpoints funcionan. Solo `/ask` responde 502 (el agente comprueba el modelo al hacer la petición, no al importar).
+- **Mensajes al arrancar:** entre `Waiting for application startup` y `Application startup complete` la app registra el modelo en uso (`AI model: ...`). Si usas Ollama, comprueba además que responda y que el modelo esté descargado; si no, imprime un `WARNING` con el comando para arreglarlo (`ollama serve` o `ollama pull ...`). Es solo un aviso: la app arranca igual. El código está en el `lifespan` de `app/main.py`.
 - **Códigos de respuesta de `/ask`:**
   - `200`: operación resuelta (`MathAnswer`).
   - `422`: la pregunta pide algo no soportado (resta, división, un saludo...), o el modelo respondió pero no logró una salida válida tras los reintentos. Ejemplo: `{"detail": "Operation not supported. Available operations: sum, multiply."}`. Es un error del cliente, no del servidor. Limitación conocida: una pregunta soportada que el modelo no logre resolver también sale como 422.

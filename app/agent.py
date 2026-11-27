@@ -1,6 +1,7 @@
 import os
 from typing import Literal
 
+import httpx
 from pydantic import BaseModel
 from pydantic_ai import Agent
 
@@ -39,6 +40,36 @@ MODEL = os.getenv("MODEL", "ollama:qwen2.5:7b")
 # PydanticAI exige OLLAMA_BASE_URL para usar el proveedor de Ollama. Si no la definiste,
 # usamos la dirección local por defecto de Ollama.
 os.environ.setdefault("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+
+OLLAMA_BASE_URL = os.environ["OLLAMA_BASE_URL"]
+
+
+# Comprueba al arrancar si Ollama responde y si el modelo está descargado. Devuelve un texto con el
+# problema, o None si todo está bien (o si el modelo no es de Ollama). Nunca lanza excepciones:
+# es solo un aviso, la app arranca igual. "transport" permite simular Ollama en los tests.
+async def ollama_problem(
+    model: str = MODEL,
+    base_url: str = OLLAMA_BASE_URL,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> str | None:
+    if not model.startswith("ollama:"):
+        return None
+    name = model.removeprefix("ollama:")
+    base_url = base_url.rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=2, transport=transport) as client:
+            response = await client.get(f"{base_url}/models")
+            response.raise_for_status()
+            installed = {item["id"] for item in response.json()["data"]}
+    except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        return (
+            f"Ollama is not reachable at {base_url}. Start it with 'ollama serve'; "
+            "/ask will return 502 until then."
+        )
+    if name not in installed:
+        return f"Model '{name}' is not installed in Ollama. Run: ollama pull {name}"
+    return None
+
 
 # El agente. defer_model_check=True evita que se exija la key o la URL al importar el módulo
 # (así la app y los tests arrancan sin ellas); la comprobación se hace en agent.run().

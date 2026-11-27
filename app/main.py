@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException
 import uvicorn
@@ -15,7 +16,7 @@ from pydantic_ai.exceptions import (
 from app.calculator import Calculator
 
 # El agente de PydanticAI vive en app/agent.py; aquí solo lo usamos en la ruta /ask.
-from app.agent import MathAnswer, UnsupportedOperation, agent
+from app.agent import MODEL, MathAnswer, UnsupportedOperation, agent, ollama_problem
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +24,28 @@ logger = logging.getLogger(__name__)
 UNSUPPORTED_DETAIL = "Operation not supported. Available operations: sum, multiply."
 MODEL_ERROR_DETAIL = "The AI model failed or is unavailable."
 
+# Logger de Uvicorn: sus mensajes salen con el mismo formato (INFO:     ...) y nivel que los de
+# arranque. Con logging.getLogger(__name__) los info no se verían (el nivel por defecto es WARNING).
+startup_logger = logging.getLogger("uvicorn.error")
+
+
+# lifespan: código que corre al arrancar (antes del yield) y al apagar (después).
+# Uvicorn imprime "Waiting for application startup" antes y "Application startup complete" después,
+# así que nuestros mensajes salen entre esas dos líneas.
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    startup_logger.info("AI model: %s", MODEL)
+    problem = await ollama_problem()
+    if problem:
+        # Solo un aviso: la app arranca igual y el resto de endpoints funcionan.
+        startup_logger.warning(problem)
+    yield
+    # Lo que se escriba después del yield corre al apagar. Uvicorn ya imprime "Shutting down",
+    # así que aquí no añadimos mensaje; sirve para cerrar conexiones, por ejemplo.
+
+
 # Instancia de la aplicación FastAPI: aquí se definen las rutas y la lógica.
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 # Creamos un objeto de la clase Calculator. Lo reutilizamos en las rutas.
 calculator = Calculator()
