@@ -47,11 +47,11 @@ agent = Agent(
     # Una lista de tipos significa "puede devolver cualquiera de estos".
     output_type=[MathAnswer, UnsupportedOperation],
     instructions=(
-        "Resuelve la pregunta usando las herramientas disponibles. "
-        "Nunca calcules el resultado tú mismo. "
-        "Solo existen la suma y la multiplicación de dos enteros. "
-        "Si la pregunta pide otra operación (resta, división, etc.) o no es una operación "
-        "matemática, devuelve UnsupportedOperation con la razón; no intentes resolverla."
+        "Answer the question using the available tools. "
+        "Never compute the result yourself. "
+        "The only supported operations are the sum and the multiplication of two integers. "
+        "If the question asks for any other operation (subtraction, division, etc.) or is not "
+        "a math question, return UnsupportedOperation with the reason; do not try to solve it."
     ),
     defer_model_check=True,
     # Reintentos si el modelo devuelve una salida inválida o llama mal a una herramienta.
@@ -65,11 +65,11 @@ agent = Agent(
 # PydanticAI usa los type hints y el docstring para describirle la herramienta al modelo.
 @agent.tool_plain
 def sum_numbers(x: int, y: int) -> int:
-    """Suma dos números enteros."""
+    """Add two integers."""
     return calculator.sum(x, y)
 
 
 @agent.tool_plain
 def multiply_numbers(x: int, y: int) -> int:
-    """Multiplica dos números enteros."""
+    """Multiply two integers."""
     return calculator.multiply(x, y)
