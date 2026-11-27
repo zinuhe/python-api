@@ -61,6 +61,20 @@ El código está en `app/agent.py`. Un agente recibe una pregunta en lenguaje na
   export ANTHROPIC_API_KEY=...
   ```
 
+- **Cambiar de modelo:** el modelo se lee de la variable de entorno `MODEL` (formato `proveedor:modelo`). Si no la defines, usa `anthropic:claude-sonnet-5-5`.
+- **Modelo local gratis con Ollama (para pruebas):**
+
+  ```
+  brew install ollama
+  ollama serve                  # déjalo corriendo en otra terminal
+  ollama pull qwen2.5:7b        # ~4,7 GB
+
+  export MODEL=ollama:qwen2.5:7b
+  export OLLAMA_BASE_URL=http://localhost:11434/v1
+  .venv/bin/uvicorn app.main:app --reload
+  ```
+
+  Probados con `/ask`: `qwen2.5:7b` (recomendado, ~2-5 s por pregunta) y `qwen3:8b` (también acierta, pero es mucho más lento porque "piensa" antes de responder). Los modelos de `llama` (`llama3.2:1b`, `llama3.1:8b`) fallaron: no devuelven el formato de `MathAnswer` de forma fiable.
 - **Sin key:** la app arranca normal y el resto de endpoints funcionan. Solo `/ask` responde 500 (el agente comprueba la key al hacer la petición, no al importar).
 - **Probar:**
 
