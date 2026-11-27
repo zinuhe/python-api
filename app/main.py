@@ -2,7 +2,13 @@ import logging
 
 from fastapi import Depends, FastAPI, HTTPException
 import uvicorn
-from pydantic_ai.exceptions import AgentRunError, UserError
+from pydantic_ai.exceptions import (
+    AgentRunError,
+    ContentFilterError,
+    ModelAPIError,
+    UnexpectedModelBehavior,
+    UserError,
+)
 
 # Importamos la clase Calculator desde app/calculator.py.
 # Como estamos dentro del paquete "app", el import usa la ruta completa desde la raíz del proyecto.
@@ -12,6 +18,10 @@ from app.calculator import Calculator
 from app.agent import MathAnswer, UnsupportedOperation, agent
 
 logger = logging.getLogger(__name__)
+
+# Mensajes fijos de /ask: nunca incluyen texto del modelo ni detalles internos.
+UNSUPPORTED_DETAIL = "Operation not supported. Available operations: sum, multiply."
+MODEL_ERROR_DETAIL = "The AI model failed or is unavailable."
 
 # Instancia de la aplicación FastAPI: aquí se definen las rutas y la lógica.
 app = FastAPI()
@@ -62,8 +72,9 @@ async def multiplicacion(x: int, y: int, calc: Calculator = Depends(get_calculat
 #
 # Códigos de respuesta:
 #   200: operación resuelta (MathAnswer).
-#   422: la pregunta pide algo no soportado (por ejemplo una división). Error del cliente.
-#   502: el modelo falló (Ollama apagado, sin API key, salida inválida...). Error del servidor,
+#   422: la pregunta pide algo no soportado (por ejemplo una división), o el modelo no logró
+#        una salida válida. Error del cliente.
+#   502: el modelo no está disponible (Ollama apagado, sin API key, error HTTP...). Error del servidor,
 #        con un mensaje genérico: el detalle se registra en el log, no se envía al cliente.
 @app.get(
     "/ask",
@@ -75,17 +86,26 @@ async def multiplicacion(x: int, y: int, calc: Calculator = Depends(get_calculat
 async def ask(question: str) -> MathAnswer:
     try:
         result = await agent.run(question)
-    except (AgentRunError, UserError):
+    except (ModelAPIError, ContentFilterError, UserError):
+        # Fallos de conexión, HTTP, filtro de contenido o configuración (por ejemplo, Ollama
+        # apagado o falta la API key): es un problema del servidor, no de la pregunta.
+        logger.exception("The model is unavailable while answering %r", question)
+        raise HTTPException(status_code=502, detail=MODEL_ERROR_DETAIL)
+    except UnexpectedModelBehavior:
+        # El modelo respondió pero no logró una salida válida tras todos los reintentos. Con
+        # preguntas que no son suma ni multiplicación (un saludo, "2 elevado a 3") es lo que
+        # suele pasar, así que se trata como operación no soportada. Riesgo conocido: una
+        # pregunta soportada que el modelo no logre resolver también saldrá como 422.
+        logger.warning("The model gave no valid output for %r", question, exc_info=True)
+        raise HTTPException(status_code=422, detail=UNSUPPORTED_DETAIL)
+    except AgentRunError:
         logger.exception("The agent failed while answering %r", question)
-        raise HTTPException(status_code=502, detail="The AI model failed or is unavailable.")
+        raise HTTPException(status_code=502, detail=MODEL_ERROR_DETAIL)
 
     if isinstance(result.output, UnsupportedOperation):
         # La razón del modelo puede venir en cualquier idioma, así que solo se registra en el log.
         logger.info("Unsupported operation for %r: %s", question, result.output.reason)
-        raise HTTPException(
-            status_code=422,
-            detail="Operation not supported. Available operations: sum, multiply.",
-        )
+        raise HTTPException(status_code=422, detail=UNSUPPORTED_DETAIL)
     return result.output
 
 # El bloque if __name__ == "__main__" solo se ejecuta cuando lanzas este archivo

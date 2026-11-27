@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from pydantic_ai import models
-from pydantic_ai.exceptions import UnexpectedModelBehavior
+from pydantic_ai.exceptions import ModelConnectionError
 from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
@@ -115,11 +115,11 @@ def test_ask_unsupported_operation_returns_422():
     }
 
 
-# Si el modelo falla (Ollama apagado, sin key, salida inválida...), es un error del servidor:
+# Si el modelo no está disponible (Ollama apagado, error HTTP...), es un error del servidor:
 # 502 con un mensaje genérico, sin filtrar el detalle interno al cliente.
-def test_ask_returns_502_when_the_model_fails():
+def test_ask_returns_502_when_the_model_is_unavailable():
     def broken_model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-        raise UnexpectedModelBehavior("secret internal detail")
+        raise ModelConnectionError("test-model", "secret internal detail")
 
     with agent.override(model=FunctionModel(broken_model)):
         response = client.get("/ask", params={"question": "cuanto es 6 por 7"})
@@ -127,3 +127,20 @@ def test_ask_returns_502_when_the_model_fails():
     assert response.status_code == 502
     assert response.json() == {"detail": "The AI model failed or is unavailable."}
     assert "secret" not in response.text
+
+
+# Si el modelo responde pero nunca logra una salida válida (suele pasar con preguntas que no son
+# suma ni multiplicación), se trata como operación no soportada: 422, no 502.
+def test_ask_returns_422_when_the_model_gives_no_valid_output():
+    def rambling_model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        # Siempre llama a la herramienta de salida con argumentos inválidos.
+        tool = next(t for t in info.output_tools if t.name.endswith("MathAnswer"))
+        return ModelResponse(parts=[ToolCallPart(tool.name, {"operation": "power"})])
+
+    with agent.override(model=FunctionModel(rambling_model)):
+        response = client.get("/ask", params={"question": "cuanto es 2 elevado a 3"})
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": "Operation not supported. Available operations: sum, multiply."
+    }

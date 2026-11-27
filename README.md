@@ -78,8 +78,8 @@ El código está en `app/agent.py`. Un agente recibe una pregunta en lenguaje na
 - **Sin Ollama corriendo (o sin key si usas Anthropic):** la app arranca normal y el resto de endpoints funcionan. Solo `/ask` responde 502 (el agente comprueba el modelo al hacer la petición, no al importar).
 - **Códigos de respuesta de `/ask`:**
   - `200`: operación resuelta (`MathAnswer`).
-  - `422`: la pregunta pide algo no soportado (resta, división, un saludo...). Ejemplo: `{"detail": "Operation not supported. Available operations: sum, multiply."}`. Es un error del cliente, no del servidor.
-  - `502`: el modelo falló o no está disponible (Ollama apagado, sin API key, salida inválida). Mensaje genérico `"The AI model failed or is unavailable."`; el detalle se registra en el log y no se envía al cliente.
+  - `422`: la pregunta pide algo no soportado (resta, división, un saludo...), o el modelo respondió pero no logró una salida válida tras los reintentos. Ejemplo: `{"detail": "Operation not supported. Available operations: sum, multiply."}`. Es un error del cliente, no del servidor. Limitación conocida: una pregunta soportada que el modelo no logre resolver también sale como 422.
+  - `502`: el modelo no está disponible (Ollama apagado, sin API key, error HTTP). Mensaje genérico `"The AI model failed or is unavailable."`; el detalle se registra en el log y no se envía al cliente.
 - **Probar:**
 
   ```
