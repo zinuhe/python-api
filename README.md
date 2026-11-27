@@ -1,7 +1,7 @@
 # python-api
 About APIs
 
-API sencilla con FastAPI que expone una operación de suma.
+API sencilla con FastAPI que expone suma y multiplicación, y un endpoint `/ask` con un agente de PydanticAI.
 
 ## Instalación
 
@@ -9,6 +9,9 @@ API sencilla con FastAPI que expone una operación de suma.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+
+# Para correr los tests (agrega pytest y httpx)
+pip install -r requirements-dev.txt
 ```
 
 ## Ejecución
@@ -43,8 +46,36 @@ Luego prueba en el navegador:
 
 - http://127.0.0.1:8000/ (welcome message)
 - http://127.0.0.1:8000/health (API status)
-- http://127.0.0.1:8000/sum?x=2&y=3 (devuelve 5)
+- http://127.0.0.1:8000/sum?x=2&y=3 (devuelve 5; usa la calculadora global, sin DI)
+- http://127.0.0.1:8000/multiply?x=4&y=5 (devuelve 20; recibe la calculadora por inyección de dependencias)
+- http://127.0.0.1:8000/ask?question=cuanto es 6 por 7 (agente de PydanticAI, necesita `ANTHROPIC_API_KEY`)
 - http://127.0.0.1:8000/docs (documentación interactiva)
+
+## Agente con PydanticAI (`/ask`)
+
+El código está en `app/agent.py`. Un agente recibe una pregunta en lenguaje natural, decide si usar la suma o la multiplicación, llama a `Calculator` como herramienta y devuelve una respuesta tipada (`MathAnswer`: `operation`, `x`, `y`, `result`, `explanation`).
+
+- **API key:** el endpoint llama a un modelo real (Anthropic), así que cada petición consume tokens. Define la key en tu terminal antes de levantar la app, sin escribirla en archivos del repo:
+
+  ```
+  export ANTHROPIC_API_KEY=...
+  ```
+
+- **Sin key:** la app arranca normal y el resto de endpoints funcionan. Solo `/ask` responde 500 (el agente comprueba la key al hacer la petición, no al importar).
+- **Probar:**
+
+  ```
+  curl -s "http://127.0.0.1:8000/ask?question=cuanto%20es%206%20por%207" | jq
+  ```
+
+## Tests
+
+```
+.venv/bin/python -m pytest -v
+```
+
+- `tests/test_multiply_di.py`: prueba `/multiply` y reemplaza la calculadora con `app.dependency_overrides`.
+- `tests/test_ask_agent.py`: prueba `/ask` **sin API key y sin llamar al modelo real**, usando `TestModel` y `FunctionModel` de PydanticAI (modelos falsos). `models.ALLOW_MODEL_REQUESTS = False` hace que el test falle si algo intentara llamar a un modelo real.
 
 ## Probar los endpoints desde la terminal
 

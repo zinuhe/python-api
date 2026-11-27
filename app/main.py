@@ -5,6 +5,9 @@ import uvicorn
 # Como estamos dentro del paquete "app", el import usa la ruta completa desde la raíz del proyecto.
 from app.calculator import Calculator
 
+# El agente de PydanticAI vive en app/agent.py; aquí solo lo usamos en la ruta /ask.
+from app.agent import MathAnswer, agent
+
 # Instancia de la aplicación FastAPI: aquí se definen las rutas y la lógica.
 app = FastAPI()
 
@@ -47,6 +50,15 @@ def get_calculator() -> Calculator:
 async def multiplicacion(x: int, y: int, calc: Calculator = Depends(get_calculator)):
     result = calc.multiply(x, y)
     return {"x": x, "y": y, "result": result}
+
+# Pregunta en lenguaje natural, por ejemplo: /ask?question=cuanto es 6 por 7
+# El agente decide qué herramienta (suma o multiplicación) usar y devuelve un MathAnswer.
+# Anotar el retorno como MathAnswer hace que FastAPI documente y valide la respuesta.
+# Necesita la variable de entorno ANTHROPIC_API_KEY.
+@app.get("/ask")
+async def ask(question: str) -> MathAnswer:
+    result = await agent.run(question)
+    return result.output
 
 # El bloque if __name__ == "__main__" solo se ejecuta cuando lanzas este archivo
 # directamente (python -m app.main), no cuando otro módulo lo importa.
