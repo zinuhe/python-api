@@ -48,20 +48,20 @@ Luego prueba en el navegador:
 - http://127.0.0.1:8000/health (API status)
 - http://127.0.0.1:8000/sum?x=2&y=3 (devuelve 5; usa la calculadora global, sin DI)
 - http://127.0.0.1:8000/multiply?x=4&y=5 (devuelve 20; recibe la calculadora por inyección de dependencias)
-- http://127.0.0.1:8000/ask?question=cuanto es 6 por 7 (agente de PydanticAI, necesita `ANTHROPIC_API_KEY`)
+- http://127.0.0.1:8000/ask?question=cuanto es 6 por 7 (agente de PydanticAI; por defecto usa Ollama local, ver abajo)
 - http://127.0.0.1:8000/docs (documentación interactiva)
 
 ## Agente con PydanticAI (`/ask`)
 
 El código está en `app/agent.py`. Un agente recibe una pregunta en lenguaje natural, decide si usar la suma o la multiplicación, llama a `Calculator` como herramienta y devuelve una respuesta tipada (`MathAnswer`: `operation`, `x`, `y`, `result`, `explanation`).
 
-- **API key:** el endpoint llama a un modelo real (Anthropic), así que cada petición consume tokens. Define la key en tu terminal antes de levantar la app, sin escribirla en archivos del repo:
+- **API key (solo si usas Anthropic):** con Anthropic cada petición consume tokens. Define la key en tu terminal antes de levantar la app, sin escribirla en archivos del repo:
 
   ```
   export ANTHROPIC_API_KEY=...
   ```
 
-- **Cambiar de modelo:** el modelo se lee de la variable de entorno `MODEL` (formato `proveedor:modelo`). Si no la defines, usa `anthropic:claude-sonnet-5-5`.
+- **Cambiar de modelo:** el modelo se lee de la variable de entorno `MODEL` (formato `proveedor:modelo`). Si no la defines, usa `ollama:qwen2.5:7b` (Ollama local, `OLLAMA_BASE_URL` por defecto `http://localhost:11434/v1`). Para usar Anthropic: `export ANTHROPIC_API_KEY=...` y `export MODEL=anthropic:claude-sonnet-5-5`.
 - **Modelo local gratis con Ollama (para pruebas):**
 
   ```
@@ -75,7 +75,7 @@ El código está en `app/agent.py`. Un agente recibe una pregunta en lenguaje na
   ```
 
   Probados con `/ask`: `qwen2.5:7b` (recomendado, ~2-5 s por pregunta) y `qwen3:8b` (también acierta, pero es mucho más lento porque "piensa" antes de responder). Los modelos de `llama` (`llama3.2:1b`, `llama3.1:8b`) fallaron: no devuelven el formato de `MathAnswer` de forma fiable.
-- **Sin key:** la app arranca normal y el resto de endpoints funcionan. Solo `/ask` responde 500 (el agente comprueba la key al hacer la petición, no al importar).
+- **Sin Ollama corriendo (o sin key si usas Anthropic):** la app arranca normal y el resto de endpoints funcionan. Solo `/ask` responde 500 (el agente comprueba el modelo al hacer la petición, no al importar).
 - **Probar:**
 
   ```

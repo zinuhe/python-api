@@ -22,9 +22,16 @@ class MathAnswer(BaseModel):
 
 
 # Modelo a usar, en formato proveedor:modelo. Se lee de la variable de entorno MODEL para poder
-# cambiarlo sin tocar el código. Por defecto, Anthropic (necesita ANTHROPIC_API_KEY).
-# Para un modelo local con Ollama: MODEL=ollama:llama3.2:1b y OLLAMA_BASE_URL=http://localhost:11434/v1
-MODEL = os.getenv("MODEL", "anthropic:claude-sonnet-5-5")
+# cambiarlo sin tocar el código. Por defecto, un modelo local con Ollama (gratis, sin key):
+# requiere tener Ollama corriendo y el modelo bajado (ollama pull qwen2.5:7b).
+# Para usar Anthropic: exporta ANTHROPIC_API_KEY y MODEL=anthropic:claude-sonnet-5-5
+# (o descomenta la línea de abajo y comenta la de Ollama).
+# MODEL = os.getenv("MODEL", "anthropic:claude-sonnet-5-5")
+MODEL = os.getenv("MODEL", "ollama:qwen2.5:7b")
+
+# PydanticAI exige OLLAMA_BASE_URL para usar el proveedor de Ollama. Si no la definiste,
+# usamos la dirección local por defecto de Ollama.
+os.environ.setdefault("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 
 # El agente. defer_model_check=True evita que se exija la key o la URL al importar el módulo
 # (así la app y los tests arrancan sin ellas); la comprobación se hace en agent.run().
