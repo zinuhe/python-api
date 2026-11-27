@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from pydantic_ai import models
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
@@ -94,3 +95,32 @@ def test_ask_requires_question():
     response = client.get("/ask")
 
     assert response.status_code == 422
+
+
+# Si el agente decide que la pregunta no es soportada (por ejemplo una división), devuelve
+# UnsupportedOperation. El endpoint lo convierte en 422 con un mensaje claro (error del cliente).
+def test_ask_unsupported_operation_returns_422():
+    def scripted_model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        # Elegimos la herramienta de salida UnsupportedOperation entre las disponibles.
+        tool = next(t for t in info.output_tools if t.name.endswith("UnsupportedOperation"))
+        return ModelResponse(parts=[ToolCallPart(tool.name, {"reason": "division is not available"})])
+
+    with agent.override(model=FunctionModel(scripted_model)):
+        response = client.get("/ask", params={"question": "cuanto es 10 dividido entre 5"})
+
+    assert response.status_code == 422
+    assert "Operation not supported" in response.json()["detail"]
+
+
+# Si el modelo falla (Ollama apagado, sin key, salida inválida...), es un error del servidor:
+# 502 con un mensaje genérico, sin filtrar el detalle interno al cliente.
+def test_ask_returns_502_when_the_model_fails():
+    def broken_model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        raise UnexpectedModelBehavior("secret internal detail")
+
+    with agent.override(model=FunctionModel(broken_model)):
+        response = client.get("/ask", params={"question": "cuanto es 6 por 7"})
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "The AI model failed or is unavailable."}
+    assert "secret" not in response.text

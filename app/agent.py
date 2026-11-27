@@ -21,6 +21,13 @@ class MathAnswer(BaseModel):
     explanation: str
 
 
+# Segunda salida posible: el agente la devuelve cuando la pregunta pide algo que no puede hacer
+# (por ejemplo una división). Sin esta opción, el modelo no tendría una salida válida para ese caso
+# y la petición terminaría en error 500. El endpoint la convierte en un 422 con un mensaje claro.
+class UnsupportedOperation(BaseModel):
+    reason: str
+
+
 # Modelo a usar, en formato proveedor:modelo. Se lee de la variable de entorno MODEL para poder
 # cambiarlo sin tocar el código. Por defecto, un modelo local con Ollama (gratis, sin key):
 # requiere tener Ollama corriendo y el modelo bajado (ollama pull qwen2.5:7b).
@@ -37,10 +44,14 @@ os.environ.setdefault("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 # (así la app y los tests arrancan sin ellas); la comprobación se hace en agent.run().
 agent = Agent(
     MODEL,
-    output_type=MathAnswer,
+    # Una lista de tipos significa "puede devolver cualquiera de estos".
+    output_type=[MathAnswer, UnsupportedOperation],
     instructions=(
         "Resuelve la pregunta usando las herramientas disponibles. "
-        "Nunca calcules el resultado tú mismo."
+        "Nunca calcules el resultado tú mismo. "
+        "Solo existen la suma y la multiplicación de dos enteros. "
+        "Si la pregunta pide otra operación (resta, división, etc.) o no es una operación "
+        "matemática, devuelve UnsupportedOperation con la razón; no intentes resolverla."
     ),
     defer_model_check=True,
     # Reintentos si el modelo devuelve una salida inválida o llama mal a una herramienta.

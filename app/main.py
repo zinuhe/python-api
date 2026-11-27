@@ -1,12 +1,17 @@
-from fastapi import Depends, FastAPI
+import logging
+
+from fastapi import Depends, FastAPI, HTTPException
 import uvicorn
+from pydantic_ai.exceptions import AgentRunError, UserError
 
 # Importamos la clase Calculator desde app/calculator.py.
 # Como estamos dentro del paquete "app", el import usa la ruta completa desde la raíz del proyecto.
 from app.calculator import Calculator
 
 # El agente de PydanticAI vive en app/agent.py; aquí solo lo usamos en la ruta /ask.
-from app.agent import MathAnswer, agent
+from app.agent import MathAnswer, UnsupportedOperation, agent
+
+logger = logging.getLogger(__name__)
 
 # Instancia de la aplicación FastAPI: aquí se definen las rutas y la lógica.
 app = FastAPI()
@@ -54,10 +59,31 @@ async def multiplicacion(x: int, y: int, calc: Calculator = Depends(get_calculat
 # Pregunta en lenguaje natural, por ejemplo: /ask?question=cuanto es 6 por 7
 # El agente decide qué herramienta (suma o multiplicación) usar y devuelve un MathAnswer.
 # Anotar el retorno como MathAnswer hace que FastAPI documente y valide la respuesta.
-# Necesita la variable de entorno ANTHROPIC_API_KEY.
-@app.get("/ask")
+#
+# Códigos de respuesta:
+#   200: operación resuelta (MathAnswer).
+#   422: la pregunta pide algo no soportado (por ejemplo una división). Error del cliente.
+#   502: el modelo falló (Ollama apagado, sin API key, salida inválida...). Error del servidor,
+#        con un mensaje genérico: el detalle se registra en el log, no se envía al cliente.
+@app.get(
+    "/ask",
+    responses={
+        422: {"description": "Operation not supported"},
+        502: {"description": "The AI model failed or is unavailable"},
+    },
+)
 async def ask(question: str) -> MathAnswer:
-    result = await agent.run(question)
+    try:
+        result = await agent.run(question)
+    except (AgentRunError, UserError):
+        logger.exception("The agent failed while answering %r", question)
+        raise HTTPException(status_code=502, detail="The AI model failed or is unavailable.")
+
+    if isinstance(result.output, UnsupportedOperation):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Operation not supported. Available operations: sum, multiply. ({result.output.reason})",
+        )
     return result.output
 
 # El bloque if __name__ == "__main__" solo se ejecuta cuando lanzas este archivo
